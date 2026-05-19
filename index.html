@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>國中體育成績與班級管理系統 v8.0 (雲端自動備份版)</title>
+    <title>國中體育成績與班級管理系統 v8.4 (Tab縱向導航版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body {
@@ -180,7 +180,7 @@
 </head>
 <body>
 
-    <h2>國中體育成績與班級管理系統 (雲端自動備份版)</h2>
+    <h2>國中體育成績與班級管理系統 (Tab縱向導航版)</h2>
 
     <div class="grid-3">
         <div class="card">
@@ -201,6 +201,11 @@
 
         <div class="card">
             <h3>系統資料儲存與備份</h3>
+            <div style="margin-bottom: 10px;">
+                <label style="font-size: 13px; font-weight: bold; display: block; margin-bottom: 4px;">☁️ 雲端備份識別代碼 (檔名)：</label>
+                <input type="text" id="teacherIdentifierInput" value="體育組_林老師" style="width: 95%; font-size: 13px;" placeholder="例如：林小明老師_115學年">
+            </div>
+            
             <button class="btn btn-success" style="padding: 10px 20px; font-weight: bold; width: 100%; display: block;" onclick="saveToLocalStorage()">💾 儲存並自動同步雲端</button>
             <div style="margin-top: 10px; display: flex; gap: 5px;">
                 <button class="btn btn-sm" style="background-color: #9b59b6; flex: 1;" onclick="exportSystemJSON()">📤 匯出備份</button>
@@ -251,7 +256,6 @@
     const PR_PRINTS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95];
     const PR_VALUES = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95];
     
-    // 體適能標準常模資料庫
     const normData = {
         crunches: {
             M: {
@@ -311,8 +315,11 @@
     window.onload = function() {
         if (localStorage.getItem('v7_精準捲腹_scores')) {
             classData = JSON.parse(localStorage.getItem('v7_精準捲腹_scores'));
-            refreshSystem();
         }
+        if (localStorage.getItem('v7_cloud_filename')) {
+            document.getElementById('teacherIdentifierInput').value = localStorage.getItem('v7_cloud_filename');
+        }
+        refreshSystem();
     };
 
     function refreshSystem() {
@@ -393,7 +400,6 @@
     function performCrossCalculations(student) {
         const gender = student.gender || 'M';
         
-        // 1. 自動帶入術科 A 
         const sem1_lj_pr = getPurePRValue('longJump', student.sem1.longJump, gender, currentClass);
         const sem1_rn_pr = getPurePRValue('run', student.sem1.run, gender, currentClass);
         student.sem1.skillA = Math.round((sem1_lj_pr + sem1_rn_pr) / 2 * 10) / 10;
@@ -402,7 +408,6 @@
         const sem2_cr_pr = getPurePRValue('crunches', student.sem2.crunches, gender, currentClass);
         student.sem2.skillA = Math.round((sem2_fx_pr + sem2_cr_pr) / 2 * 10) / 10;
 
-        // 2. 換算延伸總成績
         ['sem1', 'sem2'].forEach(sem => {
             const s = student[sem];
             const exam = parseFloat(s.examScore) || 0;
@@ -417,6 +422,23 @@
             s.daily1_1 = Math.round(((officer + 80 - warmupRun) * 0.8 + exam * 0.2) * 10) / 10;
             s.daily1_2 = Math.round(((match + 80) * 0.8 + exam * 0.2) * 10) / 10;
         });
+    }
+
+    // 🌟 新增：處理 Tab (與 Shift+Tab) 鍵縱向跳格的事件攔截
+    function handleVerticalTab(event, currentIndex, fieldName) {
+        if (event.key === 'Tab') {
+            event.preventDefault(); // 阻斷瀏覽器預設的橫向移動
+            
+            const direction = event.shiftKey ? -1 : 1; // 按住 Shift 向上移，否則向下移
+            const targetIndex = currentIndex + direction;
+            
+            // 尋找目標輸入框
+            const targetInput = document.getElementById(`input_${fieldName}_${targetIndex}`);
+            if (targetInput) {
+                targetInput.focus();
+                targetInput.select(); // 自動全選，方便快速覆蓋輸入
+            }
+        }
     }
 
     function importExcel() {
@@ -626,6 +648,7 @@
                 </td>
             `;
 
+            // 🌟 核心優化：所有輸入框動態加入 id、以及 onkeydown 鍵盤攔截監聽
             if (currentSubTab === 'fitness') {
                 const prLJ = calculatePR('longJump', sData.longJump, gender, currentClass);
                 const prFX = calculatePR('flexibility', sData.flexibility, gender, currentClass);
@@ -634,33 +657,33 @@
 
                 rowHtml += `
                     <td>
-                        <input type="number" class="score-input" value="${sData.longJump || ''}" onchange="updateData(${index}, 'longJump', this.value)">
+                        <input type="number" class="score-input" id="input_longJump_${index}" value="${sData.longJump || ''}" onchange="updateData(${index}, 'longJump', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'longJump')">
                         <span class="pr-tag" id="pr_longJump_${index}">${prLJ}</span>
                     </td>
                     <td>
-                        <input type="number" class="score-input" value="${sData.flexibility || ''}" onchange="updateData(${index}, 'flexibility', this.value)">
+                        <input type="number" class="score-input" id="input_flexibility_${index}" value="${sData.flexibility || ''}" onchange="updateData(${index}, 'flexibility', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'flexibility')">
                         <span class="pr-tag" id="pr_flexibility_${index}">${prFX}</span>
                     </td>
                     <td>
-                        <input type="number" class="score-input" value="${sData.crunches || ''}" onchange="updateData(${index}, 'crunches', this.value)">
+                        <input type="number" class="score-input" id="input_crunches_${index}" value="${sData.crunches || ''}" onchange="updateData(${index}, 'crunches', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'crunches')">
                         <span class="pr-tag" id="pr_crunches_${index}">${prCR}</span>
                     </td>
                     <td>
-                        <input type="text" class="score-input" placeholder="例 4'30\&quot;" value="${sData.run || ''}" onchange="updateData(${index}, 'run', this.value)">
+                        <input type="text" class="score-input" id="input_run_${index}" placeholder="例 4'30\&quot;" value="${sData.run || ''}" onchange="updateData(${index}, 'run', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'run')">
                         <span class="pr-tag" id="pr_run_${index}">${prRN}</span>
                     </td>
                 `;
             } else if (currentSubTab === 'exams') {
                 rowHtml += `
-                    <td><input type="number" class="score-input" value="${sData.examScore || ''}" onchange="updateData(${index}, 'examScore', this.value)"></td>
+                    <td><input type="number" class="score-input" id="input_examScore_${index}" value="${sData.examScore || ''}" onchange="updateData(${index}, 'examScore', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'examScore')"></td>
                     <td><input type="number" class="score-input readonly-input" value="${sData.skillA || 0}" readonly title="由體適能PR自動計算生成"></td>
-                    <td><input type="number" class="score-input" value="${sData.skillB || ''}" onchange="updateData(${index}, 'skillB', this.value)"></td>
+                    <td><input type="number" class="score-input" id="input_skillB_${index}" value="${sData.skillB || ''}" onchange="updateData(${index}, 'skillB', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'skillB')"></td>
                 `;
             } else if (currentSubTab === 'daily') {
                 rowHtml += `
-                    <td><input type="number" class="score-input" value="${sData.matchPlay || ''}" onchange="updateData(${index}, 'matchPlay', this.value)"></td>
-                    <td><input type="number" class="score-input" value="${sData.officer || ''}" onchange="updateData(${index}, 'officer', this.value)"></td>
-                    <td><input type="number" class="score-input" value="${sData.noWarmupRun || ''}" onchange="updateData(${index}, 'noWarmupRun', this.value)"></td>
+                    <td><input type="number" class="score-input" id="input_matchPlay_${index}" value="${sData.matchPlay || ''}" onchange="updateData(${index}, 'matchPlay', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'matchPlay')"></td>
+                    <td><input type="number" class="score-input" id="input_officer_${index}" value="${sData.officer || ''}" onchange="updateData(${index}, 'officer', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'officer')"></td>
+                    <td><input type="number" class="score-input" id="input_noWarmupRun_${index}" value="${sData.noWarmupRun || ''}" onchange="updateData(${index}, 'noWarmupRun', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'noWarmupRun')"></td>
                 `;
             } else if (currentSubTab === 'convert') {
                 rowHtml += `
@@ -677,39 +700,44 @@
         });
     }
 
-    // 儲存至本地端並發送至雲端備份
     function saveToLocalStorage() {
         localStorage.setItem('v7_精準捲腹_scores', JSON.stringify(classData));
+        const teacherIdentifier = document.getElementById('teacherIdentifierInput').value.trim() || "default_teacher";
+        localStorage.setItem('v7_cloud_filename', teacherIdentifier);
         
-        // 🚀 請替換為您在 Google Apps Script 部署成功的 Web App 網址 🚀
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwiuf79yTg3iAz-Z-SKvN3gV9d7Qz0KpLG5S9rbjjyiHmuOh6YpMpWVmxyctgHQ9k4B/exec"; 
-        
-        // 識別碼（各使用者可在此自訂名稱，雲端會依此產生獨立的 JSON 檔案）
-        const teacherIdentifier = "體育組_林老師"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyULWGLZwRaZhvFJrKhaVLt7_mcQ8tmZoqAtdYMSfA5-HHn4G9Bc0su0YqVBO10b6eM/exec"; 
 
-        if(!GAS_URL.includes("AKfycbwiuf79yTg3iAz-Z-SKvN3gV9d7Qz0KpLG5S9rbjjyiHmuOh6YpMpWVmxyctgHQ9k4B")) {
+        if(!GAS_URL.includes("您的GAS部署ID")) {
+            const payload = JSON.stringify({
+                teacherId: teacherIdentifier,
+                classData: classData
+            });
+
             fetch(GAS_URL, {
                 method: "POST",
-                mode: "no-cors", 
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    teacherId: teacherIdentifier,
-                    classData: classData
-                })
+                headers: { "Content-Type": "text/plain" },
+                body: payload
             })
-            .then(() => {
-                alert('💾 本地變更已儲存，雲端同步備份成功！');
+            .then(response => {
+                if (!response.ok) throw new Error("HTTP 狀態碼異常: " + response.status);
+                return response.json();
+            })
+            .then(res => {
+                if(res.status === "success") {
+                    alert(`💾 本地已儲存！\n☁️ 雲端已成功備份為：\n【體育成績系統備份_${teacherIdentifier}.json】`);
+                } else {
+                    alert('💾 本地已儲存，但雲端備份回報錯誤: ' + res.message);
+                }
             })
             .catch(err => {
-                console.error("雲端備份失敗:", err);
-                alert('💾 本地變更已儲存，但雲端備份失敗（請檢查網路）。');
+                console.error("雲端備份連線詳細資訊:", err);
+                alert('💾 本地資料已儲存，但雲端同步失敗（請確認網路或 GAS 部署設定）。');
             });
         } else {
             alert('💾 本地變更已儲存！（提示：尚未設定 GAS 雲端網址，故未同步至雲端。）');
         }
     }
 
-    // 導出 JSON 備份檔
     function exportSystemJSON() {
         if (Object.keys(classData).length === 0) { alert("無資料可匯出！"); return; }
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(classData));
@@ -721,7 +749,6 @@
         downloadAnchor.remove();
     }
 
-    // 匯入 JSON 備份檔
     function importSystemJSON(input) {
         const file = input.files[0];
         if (!file) return;
@@ -769,7 +796,7 @@
 
             csvContent += `${s.grade},${s.classCode},${s.no},${s.name},${g==='M'?'男':'女'},` +
                 `${m1.longJump||''},${m1.flexibility||''},${m1.crunches||''},${m1.run||''},${m1.examScore||''},${m1.skillA||0},${m1.skillB||''},${m1.matchPlay||''},${m1.officer||''},${m1.noWarmupRun||''},${m1.exam1_1||0},${m1.exam1_2||0},${m1.daily1_1||0},${m1.daily1_2||0},` +
-                `${m2.longJump||''},${m2.flexibility||''},${m2.crunches||''},${m2.run||''},${m2.examScore||''},${m2.skillA||0},${m2.skillB||''},${m2.matchPlay||''},${m2.officer||''},${m2.noWarmupRun||''},${m2.exam1_1||0},${m2.exam1_2||0},${m2.daily1_1||0},${m2.daily1_2||0}\n`;
+                `${m2.longJump||''},${m2.flexibility||''},${m2.crunches||''},${m2.run||''},${m2.examScore||''},${m2.skillA||0},${m2.skillB||''},${m2.matchPlay||''},${m2.officer||''},${m2.noWarmupRun||''},${m2.exam1_1||0},${m2.exam1_2||0},${m2.daily1_2||0},${m2.daily1_2||0}\n`;
         });
         
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
