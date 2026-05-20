@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>國中體育成績與班級管理系統 v8.6 (焦點鎖定版)</title>
+    <title>國中體育成績與班級管理系統 v8.7 (全分頁導航優化版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body {
@@ -180,7 +180,7 @@
 </head>
 <body>
 
-    <h2>國中體育成績與班級管理系統 (焦點鎖定版)</h2>
+    <h2>國中體育成績與班級管理系統 (全分頁導航優化版)</h2>
 
     <div class="grid-3">
         <div class="card">
@@ -424,10 +424,9 @@
         });
     }
 
-    // 🌟 核心優化：改良 Tab 的 Keydown 事件，主動阻斷並精準定位，不給瀏覽器失去焦點的機會
     function handleVerticalTab(event, currentIndex, fieldName) {
         if (event.key === 'Tab') {
-            event.preventDefault(); // 強制阻斷瀏覽器的預設行為
+            event.preventDefault(); 
             
             const direction = event.shiftKey ? -1 : 1; 
             const targetIndex = currentIndex + direction;
@@ -538,15 +537,15 @@
         }
     }
 
-    // 🌟 關鍵修正：當欄位修改數值時，只更新後台數據和畫面的 PR / 自動計算文字，絕對不調用 renderTable() 摧毀輸入框
+    // 🌟 全局核心優化：所有分頁輸入資料時「絕不調用 renderTable()」，100% 留存游標與 Tab 鏈
     function updateData(index, field, value) {
         const semKey = currentSemester === 1 ? 'sem1' : 'sem2';
         classData[currentClass][index][semKey][field] = value;
         
-        // 重新進行四捨五入計算
+        // 執行四捨五入公式計算
         performCrossCalculations(classData[currentClass][index]);
         
-        // 1. 如果是在體適能頁面，即時局部更新該格下方的 PR 文字
+        // 1. 如果是在體適能分頁，只針對該生該格做局部 PR 更新
         if (currentSubTab === 'fitness') {
             const gender = classData[currentClass][index].gender;
             const prText = calculatePR(field, value, gender, currentClass);
@@ -557,13 +556,19 @@
             }
         }
         
-        // 💡 註：此處故意移除了內部的 renderTable() 呼叫，確保閃動游標（Focus）100% 留在原位，不被強制中斷！
+        // 2. 如果在筆試/術科分頁，連動局部更新只讀的「術科A成績」顯示框，不破壞其他輸入框焦點
+        if (currentSubTab === 'exams') {
+            const currentAInput = document.getElementById(`readonly_skillA_${index}`);
+            if (currentAInput) {
+                currentAInput.value = classData[currentClass][index][semKey].skillA || 0;
+            }
+        }
     }
 
     function updateGender(index, genderValue) {
         classData[currentClass][index].gender = genderValue;
         performCrossCalculations(classData[currentClass][index]);
-        renderTable(); // 性別下拉選單變更，允許整表重繪
+        renderTable(); // 性別變更允許整表刷新重新校對PR
     }
 
     function renderTabs() {
@@ -678,7 +683,7 @@
             } else if (currentSubTab === 'exams') {
                 rowHtml += `
                     <td><input type="number" class="score-input" id="input_examScore_${index}" value="${sData.examScore || ''}" onchange="updateData(${index}, 'examScore', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'examScore')"></td>
-                    <td><input type="number" class="score-input readonly-input" value="${sData.skillA || 0}" readonly title="由體適能PR自動計算生成"></td>
+                    <td><input type="number" class="score-input readonly-input" id="readonly_skillA_${index}" value="${sData.skillA || 0}" readonly title="由體適能PR自動計算生成"></td>
                     <td><input type="number" class="score-input" id="input_skillB_${index}" value="${sData.skillB || ''}" onchange="updateData(${index}, 'skillB', this.value)" onkeydown="handleVerticalTab(event, ${index}, 'skillB')"></td>
                 `;
             } else if (currentSubTab === 'daily') {
