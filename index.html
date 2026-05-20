@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>國中體育成績與班級管理系統 v8.5 (縱向導航+整數版)</title>
+    <title>國中體育成績與班級管理系統 v8.6 (焦點記憶完美版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body {
@@ -180,7 +180,7 @@
 </head>
 <body>
 
-    <h2>國中體育成績與班級管理系統 (縱向導航+整數版)</h2>
+    <h2>國中體育成績與班級管理系統 (焦點記憶完美版)</h2>
 
     <div class="grid-3">
         <div class="card">
@@ -397,17 +397,16 @@
         return `PR: ${val}`;
     }
 
-    // 🌟 核心優化：將所有延伸計算改為 Math.round() 四捨五入取整數
     function performCrossCalculations(student) {
         const gender = student.gender || 'M';
         
         const sem1_lj_pr = getPurePRValue('longJump', student.sem1.longJump, gender, currentClass);
         const sem1_rn_pr = getPurePRValue('run', student.sem1.run, gender, currentClass);
-        student.sem1.skillA = Math.round((sem1_lj_pr + sem1_rn_pr) / 2); // 💡 四捨五入整數
+        student.sem1.skillA = Math.round((sem1_lj_pr + sem1_rn_pr) / 2);
 
         const sem2_fx_pr = getPurePRValue('flexibility', student.sem2.flexibility, gender, currentClass);
         const sem2_cr_pr = getPurePRValue('crunches', student.sem2.crunches, gender, currentClass);
-        student.sem2.skillA = Math.round((sem2_fx_pr + sem2_cr_pr) / 2); // 💡 四捨五入整數
+        student.sem2.skillA = Math.round((sem2_fx_pr + sem2_cr_pr) / 2);
 
         ['sem1', 'sem2'].forEach(sem => {
             const s = student[sem];
@@ -418,7 +417,6 @@
             const warmupRun = parseFloat(s.noWarmupRun) || 0;
             const match = parseFloat(s.matchPlay) || 0;
 
-            // 💡 延伸總分全面四捨五入取整數
             s.exam1_1 = Math.round(exam * 0.2 + skA * 0.8);
             s.exam1_2 = Math.round(exam * 0.2 + skB * 0.8);
             s.daily1_1 = Math.round((officer + 80 - warmupRun) * 0.8 + exam * 0.2);
@@ -426,6 +424,7 @@
         });
     }
 
+    // 🌟 優化：Tab 鍵按下時，不依賴 HTML 重繪，主動引導焦點移動
     function handleVerticalTab(event, currentIndex, fieldName) {
         if (event.key === 'Tab') {
             event.preventDefault(); 
@@ -539,12 +538,14 @@
         }
     }
 
+    // 🌟 核心修復邏輯：資料變更時的局部更新，絕不摧毀當前輸入狀態
     function updateData(index, field, value) {
         const semKey = currentSemester === 1 ? 'sem1' : 'sem2';
         classData[currentClass][index][semKey][field] = value;
         performCrossCalculations(classData[currentClass][index]);
         
         if (currentSubTab === 'fitness') {
+            // 💡 體適能分頁核心修正：直接局部修改網頁上的 PR 標籤，不觸發整個表格重繪
             const gender = classData[currentClass][index].gender;
             const prText = calculatePR(field, value, gender, currentClass);
             const prSpan = document.getElementById(`pr_${field}_${index}`);
@@ -552,10 +553,17 @@
                 prSpan.innerText = prText;
                 prSpan.className = (prText.includes("95") || prText.includes("85")) ? "pr-tag pr-high" : "pr-tag";
             }
-            // 💡 體適能有變動時，直接重算術科 A，此處做局部刷新或整體重繪
-            renderTable();
         } else {
+            // 💡 其他分頁：必須重算總分，所以要重繪，但重繪前「先記住這格的 ID」
+            const activeId = document.activeElement ? document.activeElement.id : null;
             renderTable();
+            // 重繪完成後，立刻把焦點抓回來
+            if (activeId) {
+                const targetInput = document.getElementById(activeId);
+                if (targetInput) {
+                    targetInput.focus();
+                }
+            }
         }
     }
 
@@ -650,7 +658,6 @@
                 </td>
             `;
 
-            // 🌟 核心修正：將所有動態生成的 input 欄位，100% 補齊 id、onkeydown 導航監聽
             if (currentSubTab === 'fitness') {
                 const prLJ = calculatePR('longJump', sData.longJump, gender, currentClass);
                 const prFX = calculatePR('flexibility', sData.flexibility, gender, currentClass);
@@ -766,7 +773,7 @@
                         });
                         localStorage.setItem('v7_精準捲腹_scores', JSON.stringify(classData));
                         refreshSystem();
-                        alert("🎉 資料已還原！建議點擊「儲存」同步至雲端.");
+                        alert("🎉 資料已還原！建議點擊「儲存」同步至雲端。");
                     }
                 }
             } catch (err) { alert("無效的備份檔案格式。"); }
@@ -778,7 +785,7 @@
     function clearAllData() {
         if (confirm('確定要清空全系統所有的班級與成績嗎？')) {
             classData = {}; currentClass = "";
-            localStorage.removeItem('v7_精院捲腹_scores');
+            localStorage.removeItem('v7_精準捲腹_scores');
             refreshSystem();
         }
     }
