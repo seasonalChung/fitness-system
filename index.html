@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>國中體育成績與班級管理系統 v8.6 (焦點記憶完美版)</title>
+    <title>國中體育成績與班級管理系統 v8.6 (焦點鎖定版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body {
@@ -180,7 +180,7 @@
 </head>
 <body>
 
-    <h2>國中體育成績與班級管理系統 (焦點記憶完美版)</h2>
+    <h2>國中體育成績與班級管理系統 (焦點鎖定版)</h2>
 
     <div class="grid-3">
         <div class="card">
@@ -402,11 +402,11 @@
         
         const sem1_lj_pr = getPurePRValue('longJump', student.sem1.longJump, gender, currentClass);
         const sem1_rn_pr = getPurePRValue('run', student.sem1.run, gender, currentClass);
-        student.sem1.skillA = Math.round((sem1_lj_pr + sem1_rn_pr) / 2);
+        student.sem1.skillA = Math.round((sem1_lj_pr + sem1_rn_pr) / 2); 
 
         const sem2_fx_pr = getPurePRValue('flexibility', student.sem2.flexibility, gender, currentClass);
         const sem2_cr_pr = getPurePRValue('crunches', student.sem2.crunches, gender, currentClass);
-        student.sem2.skillA = Math.round((sem2_fx_pr + sem2_cr_pr) / 2);
+        student.sem2.skillA = Math.round((sem2_fx_pr + sem2_cr_pr) / 2); 
 
         ['sem1', 'sem2'].forEach(sem => {
             const s = student[sem];
@@ -424,10 +424,10 @@
         });
     }
 
-    // 🌟 優化：Tab 鍵按下時，不依賴 HTML 重繪，主動引導焦點移動
+    // 🌟 核心優化：改良 Tab 的 Keydown 事件，主動阻斷並精準定位，不給瀏覽器失去焦點的機會
     function handleVerticalTab(event, currentIndex, fieldName) {
         if (event.key === 'Tab') {
-            event.preventDefault(); 
+            event.preventDefault(); // 強制阻斷瀏覽器的預設行為
             
             const direction = event.shiftKey ? -1 : 1; 
             const targetIndex = currentIndex + direction;
@@ -538,14 +538,16 @@
         }
     }
 
-    // 🌟 核心修復邏輯：資料變更時的局部更新，絕不摧毀當前輸入狀態
+    // 🌟 關鍵修正：當欄位修改數值時，只更新後台數據和畫面的 PR / 自動計算文字，絕對不調用 renderTable() 摧毀輸入框
     function updateData(index, field, value) {
         const semKey = currentSemester === 1 ? 'sem1' : 'sem2';
         classData[currentClass][index][semKey][field] = value;
+        
+        // 重新進行四捨五入計算
         performCrossCalculations(classData[currentClass][index]);
         
+        // 1. 如果是在體適能頁面，即時局部更新該格下方的 PR 文字
         if (currentSubTab === 'fitness') {
-            // 💡 體適能分頁核心修正：直接局部修改網頁上的 PR 標籤，不觸發整個表格重繪
             const gender = classData[currentClass][index].gender;
             const prText = calculatePR(field, value, gender, currentClass);
             const prSpan = document.getElementById(`pr_${field}_${index}`);
@@ -553,24 +555,15 @@
                 prSpan.innerText = prText;
                 prSpan.className = (prText.includes("95") || prText.includes("85")) ? "pr-tag pr-high" : "pr-tag";
             }
-        } else {
-            // 💡 其他分頁：必須重算總分，所以要重繪，但重繪前「先記住這格的 ID」
-            const activeId = document.activeElement ? document.activeElement.id : null;
-            renderTable();
-            // 重繪完成後，立刻把焦點抓回來
-            if (activeId) {
-                const targetInput = document.getElementById(activeId);
-                if (targetInput) {
-                    targetInput.focus();
-                }
-            }
         }
+        
+        // 💡 註：此處故意移除了內部的 renderTable() 呼叫，確保閃動游標（Focus）100% 留在原位，不被強制中斷！
     }
 
     function updateGender(index, genderValue) {
         classData[currentClass][index].gender = genderValue;
         performCrossCalculations(classData[currentClass][index]);
-        renderTable();
+        renderTable(); // 性別下拉選單變更，允許整表重繪
     }
 
     function renderTabs() {
