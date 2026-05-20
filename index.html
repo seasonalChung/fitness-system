@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>國中體育成績與班級管理系統 v8.4 (Tab縱向導航版)</title>
+    <title>國中體育成績與班級管理系統 v8.5 (縱向導航+整數版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body {
@@ -180,7 +180,7 @@
 </head>
 <body>
 
-    <h2>國中體育成績與班級管理系統 (Tab縱向導航版)</h2>
+    <h2>國中體育成績與班級管理系統 (縱向導航+整數版)</h2>
 
     <div class="grid-3">
         <div class="card">
@@ -397,16 +397,17 @@
         return `PR: ${val}`;
     }
 
+    // 🌟 核心優化：將所有延伸計算改為 Math.round() 四捨五入取整數
     function performCrossCalculations(student) {
         const gender = student.gender || 'M';
         
         const sem1_lj_pr = getPurePRValue('longJump', student.sem1.longJump, gender, currentClass);
         const sem1_rn_pr = getPurePRValue('run', student.sem1.run, gender, currentClass);
-        student.sem1.skillA = Math.round((sem1_lj_pr + sem1_rn_pr) / 2 * 10) / 10;
+        student.sem1.skillA = Math.round((sem1_lj_pr + sem1_rn_pr) / 2); // 💡 四捨五入整數
 
         const sem2_fx_pr = getPurePRValue('flexibility', student.sem2.flexibility, gender, currentClass);
         const sem2_cr_pr = getPurePRValue('crunches', student.sem2.crunches, gender, currentClass);
-        student.sem2.skillA = Math.round((sem2_fx_pr + sem2_cr_pr) / 2 * 10) / 10;
+        student.sem2.skillA = Math.round((sem2_fx_pr + sem2_cr_pr) / 2); // 💡 四捨五入整數
 
         ['sem1', 'sem2'].forEach(sem => {
             const s = student[sem];
@@ -417,26 +418,25 @@
             const warmupRun = parseFloat(s.noWarmupRun) || 0;
             const match = parseFloat(s.matchPlay) || 0;
 
-            s.exam1_1 = Math.round((exam * 0.2 + skA * 0.8) * 10) / 10;
-            s.exam1_2 = Math.round((exam * 0.2 + skB * 0.8) * 10) / 10;
-            s.daily1_1 = Math.round(((officer + 80 - warmupRun) * 0.8 + exam * 0.2) * 10) / 10;
-            s.daily1_2 = Math.round(((match + 80) * 0.8 + exam * 0.2) * 10) / 10;
+            // 💡 延伸總分全面四捨五入取整數
+            s.exam1_1 = Math.round(exam * 0.2 + skA * 0.8);
+            s.exam1_2 = Math.round(exam * 0.2 + skB * 0.8);
+            s.daily1_1 = Math.round((officer + 80 - warmupRun) * 0.8 + exam * 0.2);
+            s.daily1_2 = Math.round((match + 80) * 0.8 + exam * 0.2);
         });
     }
 
-    // 🌟 新增：處理 Tab (與 Shift+Tab) 鍵縱向跳格的事件攔截
     function handleVerticalTab(event, currentIndex, fieldName) {
         if (event.key === 'Tab') {
-            event.preventDefault(); // 阻斷瀏覽器預設的橫向移動
+            event.preventDefault(); 
             
-            const direction = event.shiftKey ? -1 : 1; // 按住 Shift 向上移，否則向下移
+            const direction = event.shiftKey ? -1 : 1; 
             const targetIndex = currentIndex + direction;
             
-            // 尋找目標輸入框
             const targetInput = document.getElementById(`input_${fieldName}_${targetIndex}`);
             if (targetInput) {
                 targetInput.focus();
-                targetInput.select(); // 自動全選，方便快速覆蓋輸入
+                targetInput.select(); 
             }
         }
     }
@@ -552,6 +552,8 @@
                 prSpan.innerText = prText;
                 prSpan.className = (prText.includes("95") || prText.includes("85")) ? "pr-tag pr-high" : "pr-tag";
             }
+            // 💡 體適能有變動時，直接重算術科 A，此處做局部刷新或整體重繪
+            renderTable();
         } else {
             renderTable();
         }
@@ -648,7 +650,7 @@
                 </td>
             `;
 
-            // 🌟 核心優化：所有輸入框動態加入 id、以及 onkeydown 鍵盤攔截監聽
+            // 🌟 核心修正：將所有動態生成的 input 欄位，100% 補齊 id、onkeydown 導航監聽
             if (currentSubTab === 'fitness') {
                 const prLJ = calculatePR('longJump', sData.longJump, gender, currentClass);
                 const prFX = calculatePR('flexibility', sData.flexibility, gender, currentClass);
@@ -705,7 +707,7 @@
         const teacherIdentifier = document.getElementById('teacherIdentifierInput').value.trim() || "default_teacher";
         localStorage.setItem('v7_cloud_filename', teacherIdentifier);
         
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyULWGLZwRaZhvFJrKhaVLt7_mcQ8tmZoqAtdYMSfA5-HHn4G9Bc0su0YqVBO10b6eM/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/您的GAS部署ID/exec"; 
 
         if(!GAS_URL.includes("您的GAS部署ID")) {
             const payload = JSON.stringify({
@@ -764,7 +766,7 @@
                         });
                         localStorage.setItem('v7_精準捲腹_scores', JSON.stringify(classData));
                         refreshSystem();
-                        alert("🎉 資料已還原！建議點擊「儲存」同步至雲端。");
+                        alert("🎉 資料已還原！建議點擊「儲存」同步至雲端.");
                     }
                 }
             } catch (err) { alert("無效的備份檔案格式。"); }
@@ -776,7 +778,7 @@
     function clearAllData() {
         if (confirm('確定要清空全系統所有的班級與成績嗎？')) {
             classData = {}; currentClass = "";
-            localStorage.removeItem('v7_精準捲腹_scores');
+            localStorage.removeItem('v7_精院捲腹_scores');
             refreshSystem();
         }
     }
@@ -796,7 +798,7 @@
 
             csvContent += `${s.grade},${s.classCode},${s.no},${s.name},${g==='M'?'男':'女'},` +
                 `${m1.longJump||''},${m1.flexibility||''},${m1.crunches||''},${m1.run||''},${m1.examScore||''},${m1.skillA||0},${m1.skillB||''},${m1.matchPlay||''},${m1.officer||''},${m1.noWarmupRun||''},${m1.exam1_1||0},${m1.exam1_2||0},${m1.daily1_1||0},${m1.daily1_2||0},` +
-                `${m2.longJump||''},${m2.flexibility||''},${m2.crunches||''},${m2.run||''},${m2.examScore||''},${m2.skillA||0},${m2.skillB||''},${m2.matchPlay||''},${m2.officer||''},${m2.noWarmupRun||''},${m2.exam1_1||0},${m2.exam1_2||0},${m2.daily1_2||0},${m2.daily1_2||0}\n`;
+                `${m2.longJump||''},${m2.flexibility||''},${m2.crunches||''},${m2.run||''},${m2.examScore||''},${m2.skillA||0},${m2.skillB||''},${m2.matchPlay||''},${m2.officer||''},${m2.noWarmupRun||''},${m2.exam1_1||0},${m2.exam1_2||0},${m2.daily1_1||0},${m2.daily1_2||0}\n`;
         });
         
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
